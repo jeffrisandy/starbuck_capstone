@@ -76,6 +76,7 @@ def transcript_encoded(transcript_df):
     return transcript_encoded
 
 def merge_transcript_profile(transcript_df, profile_df):
+    profile_df = profile_parse_dates(profile_df)
     transcript_encoded_df = transcript_encoded(transcript_df)
     transcript_profile_df = pd.merge(transcript_encoded_df, profile_df, left_on=['person'],
                                       right_on = ['id'], how ='left')
@@ -125,27 +126,6 @@ def find_invalid_index(transcript_df, profile_df, portfolio_df):
                 invalid_index.extend(comp.index)
 
     return invalid_index
-
-def transcript_cleaning(transcript_df, profile_df, portfolio_df):
-    try:
-        transcript_clean_df = load_file('transcript_clean.csv')
-        transcript_merge_df = load_file('transcript_merge.csv')
-        print("The transcript_clean.csv and transcript_merge.csv file are available at local folder")
-
-    except:
-        transcript_merge_df = merge_transcript_profile_portfolio(transcript_df, profile_df, portfolio_df)
-        invalid_index = find_invalid_index(transcript_df, profile_df, portfolio_df)
-        transcript_clean_df = transcript_merge_df.loc[~transcript_merge_df.index.isin(invalid_index),:]
-
-        #marking invalid in transcript_merge_df
-        transcript_merge_df.loc[transcript_merge_df.index.isin(invalid_index),"invalid"] = 1
-        transcript_merge_df.loc[~transcript_merge_df.index.isin(invalid_index),"invalid"] = 0
-
-        #saving df
-        transcript_clean_df.to_csv('transcript_clean.csv')
-        transcript_merge_df.to_csv('transcript_merge.csv')
-
-    return transcript_clean_df, transcript_merge_df
 
 
 def transcript_cleaning(transcript_df, profile_df, portfolio_df):

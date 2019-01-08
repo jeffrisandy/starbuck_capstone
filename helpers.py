@@ -147,9 +147,9 @@ def transcript_cleaning(transcript_df, profile_df, portfolio_df):
     return transcript_clean_df
 
 def transcript_preprocessing(transcript_df, profile_df, portfolio_df):
-    transcript_clean_df = transcript_cleaning(transcript_df, profile_df, portfolio_df)
-    transcript_valid_df = transcript_clean_df[transcript_clean_df.invalid == 0]
-    return transcript_valid_df, transcript_clean_df
+    transcript_all_df = transcript_cleaning(transcript_df, profile_df, portfolio_df)
+    transcript_valid_df = transcript_all_df[transcript_all_df.invalid == 0]
+    return transcript_valid_df, transcript_all_df
 
 def load_file(filepath):
     df_clean = pd.read_csv(filepath)
@@ -159,7 +159,7 @@ def load_file(filepath):
 
 
 ################################
-""" FEATURES EEXTRACTION """
+""" FEATURES EXTRACTION """
 ################################
 
 def get_response_time(df, profile_id):
@@ -265,7 +265,124 @@ def feature_fillna(profile_updated_df):
     profile_updated_df = profile_updated_df.drop(cols_to_drop, axis=1)
     return profile_updated_df
 
-def feature_extraction(transcript_clean_df, profile_df, portfolio_df):
+def add_invalid_feature(profile_updated_df, transcript_merge_df):
+    profile_updated_df = profile_updated_df.copy()
+
+    person_invalid = transcript_merge_df[transcript_merge_df.invalid == 1].person.value_counts()
+    # create new feature 'invalid', how many invalid transaction made by customer (transaction that not influenced by offer)
+    profile_updated_df['invalid'] = person_invalid
+    profile_updated_df['invalid'] = profile_updated_df['invalid'].fillna(0)
+
+    return profile_updated_df
+
+def add_feature_rate_portfolio_type(profile_updated_df):
+    """
+    Create features
+        - Total Count of the offer received, reviewed, completed for each type of portfolio (bogo, discount, and informational)
+        - Rates for each offering type (bogo/discount/informational) :
+            - rate_review = total reviewed / total received
+            - rate_completed_reviewed = total completed / total reviewed
+            - rate_completed_received = tatal completed / total received
+
+    """
+    profile_updated = profile_updated_df.copy()
+
+    for offer in ['bogo', 'discount', 'informational']:
+        received_cols = profile_updated.columns[(profile_updated.columns.str.contains('received_' + offer)) & \
+                                                (~profile_updated.columns.str.contains('rate' ))].tolist()
+        profile_updated[offer +'_received'] = profile_updated[received_cols].sum(axis=1).fillna(0)
+
+        viewed_cols = profile_updated.columns[(profile_updated.columns.str.contains('viewed_' + offer)) & \
+                                                (~profile_updated.columns.str.contains('rate'))].tolist()
+        profile_updated[offer +'_viewed'] = profile_updated[viewed_cols].sum(axis=1).fillna(0)
+
+        profile_updated['rate_viewed_' + offer] = (profile_updated[offer +'_viewed'] / profile_updated[offer +'_received']).fillna(0)
+
+        if offer != 'informational':
+            completed_cols = profile_updated.columns[(profile_updated.columns.str.contains('completed_' + offer)) & \
+                                                (~profile_updated.columns.str.contains('rate' ))].tolist()
+            profile_updated[offer +'_completed'] = profile_updated[completed_cols].sum(axis=1).fillna(0)
+
+            profile_updated['rate_completed_viewed_' + offer] = \
+                        (profile_updated[offer +'_completed'] /profile_updated[offer +'_viewed']).fillna(0)
+            profile_updated['rate_completed_received_' + offer] = \
+                        (profile_updated[offer +'_completed'] / profile_updated[offer +'_received']).fillna(0)
+
+    return profile_updated
+
+def add_feature_rate_overall(profile_updated_df):
+
+    """
+    Create Feature :
+    - Total count of received, viewed, completed
+    - Overall Rates :
+            - rate_review = total reviewed / total received
+            - rate_completed_reviewed = total completed / total reviewed
+            - rate_completed_received = tatal completed / total received
+
+    """
+    profile_updated = profile_updated_df.copy()
+
+    profile_updated['offer_received_total'] = profile_updated.bogo_received + profile_updated.discount_received + \
+                                            profile_updated.informational_received
+
+    profile_updated['offer_viewed_total'] = profile_updated.bogo_viewed + profile_updated.discount_viewed + \
+                                            profile_updated.informational_viewed
+
+    profile_updated['offer_completed_total'] = profile_updated.bogo_completed + profile_updated.discount_completed
+
+    profile_updated['rate_offer_viewed_overall'] = \
+            (profile_updated['offer_viewed_total'] / profile_updated['offer_received_total']).fillna(0)
+
+    profile_updated['rate_offer_completed_received_overall'] = \
+            (profile_updated['offer_completed_total'] / profile_updated['offer_received_total']).fillna(0)
+
+    profile_updated['rate_offer_completed_viewed_overall'] = \
+            (profile_updated['offer_completed_total'] / profile_updated['offer_viewed_total']).fillna(0)
+
+
+    return profile_updated
+
+
+def add_feature_rate_portfolio_id(profile_updated_df, portfolio_df):
+
+    """
+    Create Feature :
+    - Rates for each offering in portfolio  :
+            - rate_review = total reviewed / total received
+            - rate_completed_reviewed = total completed / total reviewed
+            - rate_completed_received = tatal completed / total received
+    """
+    profile_updated = profile_updated_df.copy()
+    portfolio_updated = portfolio_preprocessing(portfolio_df)
+
+    for offer_name in portfolio_updated.name.tolist():
+        profile_updated['rate_offer_viewed_' + offer_name ] = \
+            (profile_updated['offer viewed_' + offer_name] / profile_updated['offer received_' + offer_name]).fillna(0)
+
+        if offer_name not in portfolio_updated[portfolio_updated.name.str.contains('informational')]['name'].tolist() :
+            profile_updated['rate_offer_completed_viewed_' + offer_name ] = \
+                (profile_updated['offer completed_' + offer_name] / profile_updated['offer viewed_' + offer_name]).fillna(0)
+
+            profile_updated['rate_offer_completed_received_' + offer_name ] = \
+                (profile_updated['offer completed_' + offer_name] / profile_updated['offer received_' + offer_name]).fillna(0)
+
+    return profile_updated
+
+def add_feature_transaction_completed_ratio(profile_updated_df):
+    """
+    Create feature transcation count to offer completed ratio
+
+    to avoid np.inf as a result of division, a 0.1 number was added to the denominator
+    """
+    profile_updated = profile_updated_df.copy()
+
+    profile_updated['transaction_completed_ratio'] = \
+            profile_updated.transaction_count / (profile_updated.offer_completed_total + 0.1)
+
+    return profile_updated
+
+def feature_extraction(transcript_clean_df, transcript_all_df, profile_df, portfolio_df):
     try:
         profile_updated = load_file('profile_updated.csv')
         print("The profile_updated.csv file is available at local folder.")
@@ -285,6 +402,23 @@ def feature_extraction(transcript_clean_df, profile_df, portfolio_df):
 
         # re-encode selected features as they should be zero instead of NaN as they did not received any offer
         profile_updated = feature_fillna(profile_updated)
+
+        # create new FEATURES
+
+        # add feature whether the customer made a valid or invalid transaction of offer completed
+        profile_updated = add_invalid_feature(profile_updated, transcript_all_df)
+
+        # add feature rate per portfolio type (bogo/discount/informational)
+        profile_updated = add_feature_rate_portfolio_type(profile_updated)
+
+        # add feature rate overall by event type (offer received, viewed, completed)
+        profile_updated = add_feature_rate_overall(profile_updated)
+
+        # add feature rate for individual portfolio id
+        profile_updated = add_feature_rate_portfolio_id(profile_updated, portfolio_df)
+
+        # add feature transaction to offer completed ratio
+        profile_updated = add_feature_transaction_completed_ratio(profile_updated)
 
         #saving
         profile_updated.to_csv('profile_updated.csv')

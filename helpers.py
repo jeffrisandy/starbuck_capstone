@@ -211,7 +211,7 @@ def transcript_cleaning(transcript_df, profile_df, portfolio_df):
     The invalid offer completed is the offer completed when the customer never viewed the offer.
     """
     try:
-        transcript_clean_df = load_file('transcript_clean.csv')
+        transcript_clean_df = load_file('data/transcript_clean.csv')
         print("The transcript_clean.csv and transcript_merge.csv file are available at local folder")
 
     except:
@@ -223,7 +223,7 @@ def transcript_cleaning(transcript_df, profile_df, portfolio_df):
         transcript_clean_df.loc[~transcript_clean_df.index.isin(invalid_index),"invalid"] = 0
 
         #saving df
-        transcript_clean_df.to_csv('transcript_clean.csv')
+        transcript_clean_df.to_csv('data/transcript_clean.csv')
 
     return transcript_clean_df
 
@@ -534,7 +534,7 @@ def feature_extraction(transcript_clean_df, transcript_all_df, profile_df, portf
     """
 
     try:
-        profile_updated = load_file('profile_updated.csv')
+        profile_updated = load_file('data/profile_updated.csv')
         print("The profile_updated.csv file is available at local folder.")
     except:
         attributes_df = pd.DataFrame(index=generate_attributes(portfolio_df))
@@ -571,7 +571,7 @@ def feature_extraction(transcript_clean_df, transcript_all_df, profile_df, portf
         profile_updated = add_feature_transaction_completed_ratio(profile_updated)
 
         #saving
-        profile_updated.to_csv('profile_updated.csv')
+        profile_updated.to_csv('data/profile_updated.csv')
 
     return profile_updated
 

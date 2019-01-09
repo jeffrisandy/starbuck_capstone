@@ -14,6 +14,13 @@ import datetime
 """
 
 def add_portfolio_name(portfolio_df):
+    """
+    INPUT :
+        portfolio_df : portfolio df
+
+    RETURN :
+        portfolio_df : updated portfolio df with addtional col of name of each offer ids
+    """
     portfolio_df = portfolio_df.copy()
     portfolio_df['name'] = portfolio_df.offer_type.astype(str) + "_" + portfolio_df.difficulty.astype(str) +\
                       "_" + portfolio_df.reward.astype(str) + \
@@ -21,6 +28,13 @@ def add_portfolio_name(portfolio_df):
     return portfolio_df
 
 def one_hot_channels(portfolio_df):
+    """
+    INPUT :
+        portfolio_df : portfolio df
+
+    RETURN :
+        portfolio_df : updated portfolio df with addtional columsn of one hot encoded of channels columns
+    """
     portfolio_df = portfolio_df.copy()
     channels = ['web', 'email', 'mobile', 'social']
 
@@ -32,6 +46,13 @@ def one_hot_channels(portfolio_df):
     return portfolio_df
 
 def portfolio_preprocessing(portfolio_df):
+    """
+    INPUT :
+        portfolio_df : portfolio df
+
+    RETURN :
+        portfolio_df : updated preprocessed portfolio df
+    """
     portfolio_df = portfolio_df.copy()
     # add portfolio add_portfolio_name
     portfolio_df = add_portfolio_name(portfolio_df)
@@ -46,6 +67,14 @@ Profile preprocessing
 """
 
 def profile_parse_dates(profile_df):
+    """
+    INPUT :
+        portfolio_df : profile df with became_member_on as int
+
+    RETURN :
+        profile_df : updated portfolio df with parsed dates as datetime in became_member_on
+    """
+
     profile_df = profile_df.copy()
 
     #convert to string
@@ -54,9 +83,16 @@ def profile_parse_dates(profile_df):
     profile_df['became_member_on'] = pd.to_datetime(profile_df.became_member_on)
     return profile_df
 
-""" Transcript preprocessing """
+"""
+########################
+Transcript preprocessing
+########################
+"""
 
 def encode_offer_id(x):
+    """
+    This function return a value of "offer id" or "offer_id"
+    """
     try :
         return x['offer id']
     except:
@@ -67,6 +103,12 @@ def transcript_encoded(transcript_df):
     To encode column :
         - event : received, reviewed, completed
         - value : offer_id, amount
+
+    INPUT :
+        transcript_df : transcript def
+    RETURN :
+        transcript_encoded : encoded transcript df of value column
+
     """
 
     transcript_encoded = transcript_df.copy()
@@ -76,6 +118,14 @@ def transcript_encoded(transcript_df):
     return transcript_encoded
 
 def merge_transcript_profile(transcript_df, profile_df):
+    """
+    This function is to merge profile df to transcript df
+    INPUT:
+        transcript_df : transcript df
+        profile_df : profile df
+    RETURN :
+        transcript_profile_df : a merge of transcript and profile df
+    """
     profile_df = profile_parse_dates(profile_df)
     transcript_encoded_df = transcript_encoded(transcript_df)
     transcript_profile_df = pd.merge(transcript_encoded_df, profile_df, left_on=['person'],
@@ -85,6 +135,16 @@ def merge_transcript_profile(transcript_df, profile_df):
     return transcript_profile_df
 
 def merge_transcript_profile_portfolio(transcript_df, profile_df, portfolio_df):
+    """
+    This function is to merge profile to a merged df of profile & transcript df
+    INPUT:
+        transcript_df : transcript df
+        profile_df : profile df
+        portfolio_df : portfolio df
+    RETURN :
+        transcript_profile_porto: a merge of transcript and profile, and portfolio df
+    """
+
     portfolio_df = portfolio_preprocessing(portfolio_df)
     transcript_profile_df = merge_transcript_profile(transcript_df, profile_df)
     transcript_profile_porto = pd.merge(transcript_profile_df, portfolio_df, left_on = 'offer_id', right_on ='id', how='left').drop('id', axis=1)
@@ -98,7 +158,7 @@ def find_invalid_index(transcript_df, profile_df, portfolio_df):
     INPUT : transcript, profile, portfolio dataframe
     RETURN : a list of invalid index in transcript dataframe
     """
-    
+
     #merge transcript, profile, and portfolio dataframe
     trascript_merge_df = merge_transcript_profile_portfolio(transcript_df, profile_df, portfolio_df)
 
@@ -135,6 +195,21 @@ def find_invalid_index(transcript_df, profile_df, portfolio_df):
 
 
 def transcript_cleaning(transcript_df, profile_df, portfolio_df):
+    """
+    INPUT :
+        transcript_df : transcript df
+        profile_df : profile df
+        portfolio_df : portfolio df
+    RETURN :
+        transcript_clean_df : a clean transcript df that has additinal column to mark the invalid offer completed
+
+    This function will check whether a saved "transcript_clean.csv" is available and use it if available
+    Ohter wise, the function will continue to execute the next block code to clean the dataframe,
+    and  save a clean transcript df as "transcript_clean.csv".
+
+    The function will mark where the invalid offer completed as 1, else 0.
+    The invalid offer completed is the offer completed when the customer never viewed the offer.
+    """
     try:
         transcript_clean_df = load_file('transcript_clean.csv')
         print("The transcript_clean.csv and transcript_merge.csv file are available at local folder")
@@ -153,22 +228,40 @@ def transcript_cleaning(transcript_df, profile_df, portfolio_df):
     return transcript_clean_df
 
 def transcript_preprocessing(transcript_df, profile_df, portfolio_df):
+    """
+    INPUT : transcript_df, profile_df, portfolio_df : DataFrame
+    RETURN :
+        transcript_valid_df : transcript df that only contains the valid offer, mark as 0 in invalid column
+        transcript_all_df : transcript all df as return by transcript_cleaning function
+    """
     transcript_all_df = transcript_cleaning(transcript_df, profile_df, portfolio_df)
     transcript_valid_df = transcript_all_df[transcript_all_df.invalid == 0]
     return transcript_valid_df, transcript_all_df
 
 def load_file(filepath):
+    """Load file csv"""
     df_clean = pd.read_csv(filepath)
     df_clean = df_clean.set_index(df_clean.columns[0])
     df_clean = profile_parse_dates(df_clean)
     return df_clean
 
 
+"""
 ################################
-""" FEATURES EXTRACTION """
+FEATURES EXTRACTION
 ################################
+"""
 
 def get_response_time(df, profile_id):
+    """
+    INPUT :
+        df : DataFrame, clean merge transcript df
+        profile_id : profile id
+    RETURN :
+        response_time_series : a Series of response_time of offering for given profile_id
+
+    Response time is caluclated from the time delta between time(hour) of offer viewed to offer completed
+    """
     subset_offer_typ = df[df.event == 'offer completed']['name'].unique().tolist()
 
     response_time_series = pd.Series(name=profile_id)
@@ -194,6 +287,14 @@ def get_response_time(df, profile_id):
     return response_time_series
 
 def get_spending_series(df, profile_id):
+    """
+    INPUT :
+        df : DataFrame, clean merge transcript df
+        profile_id : profile id
+    RETURN :
+        spending_series : a Series of spending for a given profile_id (avg, transaction_count, and sum_spending)
+
+    """
     avg_spending = df.amount.mean()
     transaction_count = df.amount.count()
     sum_spending = df.amount.sum()
@@ -201,18 +302,28 @@ def get_spending_series(df, profile_id):
     spending_series = pd.Series([avg_spending, transaction_count, sum_spending], index=["avg_spending", "transaction_count", 'sum_spending'], name=profile_id)
     return spending_series
 
-# def get_offer_typ_series(df, profile_id):
-#     offer_typ_series = df.offer_type.value_counts()
-#     offer_typ_series.name = profile_id
-#     return offer_typ_series
 
 def get_event_typ_series(df, profile_id):
+    """
+    INPUT :
+        df : DataFrame, clean merge transcript df
+        profile_id : profile id
+    RETURN :
+        event_typ_series : a Series of event_type value counts for given profile_id
+    """
     event_typ_series = (df.event + "_" + df.name).value_counts()
     event_typ_series.name = profile_id
     return event_typ_series
 
 def get_attributes_series(df, profile_id):
-    #offer_typ_series = get_offer_typ_series(df, profile_id)
+    """
+    INPUT :
+        df : DataFrame, clean merge transcript df
+        profile_id : profile id
+    RETURN :
+        attributes_series : a Series of attributes for given profile_id
+
+    """
     event_typ_series = get_event_typ_series(df, profile_id)
     response_time_series = get_response_time(df, profile_id)
     spending_series = get_spending_series(df, profile_id)
@@ -220,15 +331,27 @@ def get_attributes_series(df, profile_id):
     return attributes_series
 
 def generate_attributes(portfolio_df):
+    """
+    INPUT :
+        portfolio_df : portfolio df
+    RETURN :
+        attributes: a list of attributes name
+    """
+
     portfolio_df = portfolio_preprocessing(portfolio_df)
     events = ['offer received', 'offer viewed', 'offer completed']
     portfolio_names = [ event +"_"+ name for event in events for name in portfolio_df.name.tolist() ]
-    #offer_type_list = portfolio_df.offer_type.unique().tolist()
+
     response_time_attributes = [name +'_' +'response_time_avg' for name in portfolio_df.name.tolist() ]
     attributes = portfolio_names + response_time_attributes + ["avg_spending", "transaction_count", "sum_spending"]
     return attributes
 
 def feature_fillna(profile_updated_df):
+    """
+    This function is to fill missing value with zero (0) for selected feature
+    INPUT: profile_updated_df with missing values
+    RETURN : profile_updated_df with no missing values
+    """
     profile_updated_df = profile_updated_df.copy()
 
     cols_to_fillna = ['offer received_bogo_10_10_7',
@@ -272,6 +395,15 @@ def feature_fillna(profile_updated_df):
     return profile_updated_df
 
 def add_invalid_feature(profile_updated_df, transcript_merge_df):
+    """
+    INPUT :
+        profile_updated_df : updated profile df
+        transcript_merge_df : transcript_all_df as return by transcrip_preprocessing function
+    RETURN :
+        profile_updated_df : updated profile df with invalid columns that  is a count how many each profile id made an invalid offer completed
+
+    """
+
     profile_updated_df = profile_updated_df.copy()
 
     person_invalid = transcript_merge_df[transcript_merge_df.invalid == 1].person.value_counts()
@@ -389,6 +521,18 @@ def add_feature_transaction_completed_ratio(profile_updated_df):
     return profile_updated
 
 def feature_extraction(transcript_clean_df, transcript_all_df, profile_df, portfolio_df):
+    """
+    INPUT :
+        transcript_clean_df : a clean transcript df
+        transcript_all_df : transcript all df as return by transcript_preprocessing function
+        portfolio_df : portfolio df
+    RETURN :
+        profile_updated : profile updated df with 92 features
+
+    This function will check first whether the saved "profile_updated.csv" is available
+    If not available, the next function code block will be execute, then save it.
+    """
+
     try:
         profile_updated = load_file('profile_updated.csv')
         print("The profile_updated.csv file is available at local folder.")
@@ -434,25 +578,79 @@ def feature_extraction(transcript_clean_df, transcript_all_df, profile_df, portf
 
 """
 #######################
-FEATURE PREPRPOCESSING
+FEATURE PREPROCESSING
 #######################
 """
 
-def add_invalid_feature(profile_updated_df, transcript_merge_df):
-    profile_updated_df = profile_updated_df.copy()
 
-    person_invalid = transcript_merge_df[transcript_merge_df.invalid == 1].person.value_counts()
-    # create new feature 'invalid', how many invalid transaction made by customer (transaction that not influenced by offer)
-    profile_updated_df['invalid'] = person_invalid
-    profile_updated_df['invalid'] = profile_updated_df['invalid'].fillna(0)
 
-    return profile_updated_df
+def separate_profile(profile_updated_df):
+    """
+    INPUT :
+        profile_updated_df : dataframe of profile
+
+    RETURN :
+        profile_updated_main : updated profile df for main profile, age < 100
+        profile_updated_sp : updated profile df for special profile, age >= 100
+    """
+    # sparate data with age < 100 and age >= 100, missing value on gender and income
+
+    #main profile
+    profile_updated_main = profile_updated_df[profile_updated_df.age < 100]
+
+    #special profile
+    profile_updated_sp = profile_updated_df[profile_updated_df.age >= 100]
+    profile_updated_sp = profile_updated_sp.drop(['gender', 'income', 'age'], axis=1)
+
+    return profile_updated_main, profile_updated_sp
+
 
 def encode_member_day(profile_updated_df):
+    """
+    INPUT :
+        profile_updated_df : profile df
+
+    RETURN :
+        profile_updated_df : updated profile df, with additional col of 'member_year'
+
+    It calculate delta days 31 dec 2018 and became_member_on date
+    """
     profile_updated_df = profile_updated_df.copy()
-    profile_updated_df['member_day'] = (datetime.datetime(2018,12,31) - profile_updated_df.became_member_on).dt.days
+    profile_updated_df['member_days_since'] = (datetime.datetime(2018,12,31) - profile_updated_df.became_member_on).dt.days
+    profile_updated_df['member_year'] = profile_updated_df.became_member_on.dt.year.astype(str)
     profile_updated_df = profile_updated_df.drop('became_member_on', axis=1)
     return profile_updated_df
+
+def feature_preprocessing(profile_updated_df, transcript_all_df, portfolio_df):
+    """
+    INPUT :
+        profile_updated_df : updated profile df
+        transcript_all_df : transcript df that contains both invalid and valid profile as output of transcrip_preprocessing function
+        portfolio_df : portfolio df
+
+    RETURN :
+        profile_onehot_main : main profile df with one_hot enconded
+        profile_onehot_sp : sp profile df with one_hot enconded
+
+    """
+    #drop features that have more than 50% missing values
+    col_null = profile_updated_df.isnull().sum()
+    col_null_frac = col_null / profile_updated_df.shape[0]
+    cols_to_drop = col_null_frac[col_null_frac > 0.5].index.tolist()
+    profile_updated_df = profile_updated_df.drop(cols_to_drop, axis=1)
+
+    # remove row data that have age > 100 years, missing values on income and gender
+    profile_updated_main, profile_updated_sp = separate_profile(profile_updated_df)
+
+    # re-encode became_member_on to member_day (how may days since become member from 31 dec 2018)
+    profile_updated_clean = encode_member_day(profile_updated_main)
+    profile_updated_sp = encode_member_day(profile_updated_sp)
+
+    # one-hot the categorical features
+    profile_onehot_main = pd.get_dummies(profile_updated_clean)
+    profile_onehot_sp = pd.get_dummies(profile_updated_sp)
+
+    return profile_onehot_main, profile_onehot_sp
 
 """
 #######################
@@ -461,9 +659,21 @@ SAVE & LOAD MODEL
 """
 
 def save(model, filename):
+    """
+    This function is to save the sklearn object
+    INPUT :
+        model : sklearn object
+        filename : filepath to saved
+    RETURN : none
+    """
     import pickle
     pickle.dump(model, open(filename,'wb'))
 
 def load(filename):
+    """
+    This function is to load the saved sklearn object
+    INPUT : filename : filepath
+    RETURN : loaded sklearn object
+    """
     import pickle
     return pickle.load(open(filename, 'rb'))

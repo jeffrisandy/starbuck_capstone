@@ -20,7 +20,7 @@ Using the data, I aim to :
 Gain understanding what types of customer characteristics and demographics are there.
 What offer should be sent to each customer ?
 
-An unsupervised machine learning model with K-Means algorithm is used to cluster the customers. The number of clusters is chosen with 2 metrics : the higher Silhouette score and the lower Inertia / SSE value.
+An unsupervised machine learning model with K-Means algorithm is used to cluster the customers. The number of clusters is chosen with 2 metrics - the higher Silhouette score and the lower Inertia / SSE value.
 
 
 ## File Descriptions <a name="files"></a>
@@ -42,25 +42,25 @@ The dataset is in folder data, contained in three files:
 Here is the schema and explanation of each variable in the files:
 
 `portfolio.json`
-- id (string) - offer id
-- offer_type (string) - type of offer ie BOGO, discount, informational
-- difficulty (int) - minimum required spend to complete an offer
-- reward (int) - reward given for completing an offer
-- duration (int) -
-- channels (list of strings)
+- `id` (string) - offer id
+- `offer_type` (string) - type of offer ie BOGO, discount, informational
+- `difficulty` (int) - minimum required spend to complete an offer
+- `reward` (int) - reward given for completing an offer
+- `duration` (int) -
+- `channels` (list of strings)
 
 `profile.json`
-- age (int) - age of the customer
-- became_member_on (int) - date when customer created an app account
-- gender (str) - gender of the customer (note some entries contain 'O' for other rather than M or F)
-- id (str) - customer id
-- income (float) - customer's income
+- `age` (int) - age of the customer
+- `became_member_on` (int) - date when customer created an app account
+- `gender` (str) - gender of the customer (note some entries contain 'O' for other rather than M or F)
+- `id` (str) - customer id
+- `income` (float) - customer's income
 
 `transcript.json`
-- event (str) - record description (ie transaction, offer received, offer viewed, etc.)
-- person (str) - customer id
-- time (int) - time in hours. The data begins at time t=0
-- value - (dict of strings) - either an offer id or transaction amount depending on the record
+- `event` (str) - record description (ie transaction, offer received, offer viewed, etc.)
+- `person` (str) - customer id
+- `time` (int) - time in hours. The data begins at time t=0
+- `value` - (dict of strings) - either an offer id or transaction amount depending on the record
 
 
 ## Results<a name="results"></a>

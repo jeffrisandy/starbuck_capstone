@@ -94,6 +94,12 @@ def merge_transcript_profile_portfolio(transcript_df, profile_df, portfolio_df):
     return transcript_profile_porto
 
 def find_invalid_index(transcript_df, profile_df, portfolio_df):
+    """
+    INPUT : transcript, profile, portfolio dataframe
+    RETURN : a list of invalid index in transcript dataframe
+    """
+    
+    #merge transcript, profile, and portfolio dataframe
     trascript_merge_df = merge_transcript_profile_portfolio(transcript_df, profile_df, portfolio_df)
 
     # list of invalid index of offer completed

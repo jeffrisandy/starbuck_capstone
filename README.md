@@ -36,9 +36,9 @@ There is a `helpers.py` as utilities and also to extract features from the avail
 ### Dataset
 The dataset is in folder data, contained in three files:
 
-- portfolio.json - containing offer ids and meta data about each offer (duration, type, etc.)
-- profile.json - demographic data for each customer
-- transcript.json - records for transactions, offers received, offers viewed, and offers completed
+- `portfolio.json` - containing offer ids and meta data about each offer (duration, type, etc.)
+- `profile.json` - demographic data for each customer
+- `transcript.json` - records for transactions, offers received, offers viewed, and offers completed
 Here is the schema and explanation of each variable in the files:
 
 `portfolio.json`

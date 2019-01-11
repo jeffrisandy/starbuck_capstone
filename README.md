@@ -33,8 +33,10 @@ A supervised machine learning model with regression is used to predict the custo
 ### Notebooks
 There  are 3 notebooks available:
 - part 1 about data understanding and cleaning process
-- part 2 about EDA, feature preprocessing and unsupervised Machine Learning with KMeans.Markdown cells were used to assist in walking through the thought process for individual steps.
+- part 2 about EDA, feature preprocessing and unsupervised Machine Learning with KMeans.
 - part 3 about supervised machine learning model to predict how well customer response to offer
+
+Markdown cells were used to assist in walking through the thought process for individual steps.
 
 ### Helpers function
 There is a `helpers.py` as utilities and also to extract features from the available data.

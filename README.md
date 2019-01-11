@@ -9,7 +9,9 @@
 
 ## Installation <a name="installation"></a>
 
-1. Anaconda distribution of Python version 3.5 or later
+1. Anaconda distribution of Python version 3.6 or later
+2. [eli5](https://eli5.readthedocs.io/en/latest/)
+3. [PDPBox](https://pdpbox.readthedocs.io/en/latest/)
 
 ## Project Motivation<a name="motivation"></a>
 
